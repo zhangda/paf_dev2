@@ -81,7 +81,13 @@ exports.show = function(req, res){
     Api.find().where('parentId').equals(api._id).exec(function(err,apis){
       if(err) return res.json(400,{info:{code:'',message:err.err}})
       api.children = apis
-      return res.json(api)
+      if(api.parentId!=0){
+        Api.findOne({'_id':api.parentId}, function(err, parent){
+            if(err) return res.json(400,{info:{code:'',message:err.err}})
+            api.parent = parent
+            return res.json(api)
+        })
+      }else return res.json(api)
     })
   })
 }
