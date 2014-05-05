@@ -6,6 +6,7 @@
 var express = require('express');
 var routes = require('./routes');
 var api = require('./routes/api');
+var user = require('./routes/user');
 var http = require('http');
 var path = require('path');
 var mongoose = require('mongoose');
@@ -51,9 +52,12 @@ app.get('/', routes.index)
 app.get('/apis/:level', api.list)
 app.post('/api', api.create)
 app.put('/api/:id', api.update)
-app.get('/api/:key', api.show)
+app.get('/api/key/:key', api.showByKey)
+app.get('/api/id/:id', api.showById)
 app.del('/api/:id', api.remove)
 //app.get('/api/query', api.query)
+
+app.get('/users', user.list)
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));

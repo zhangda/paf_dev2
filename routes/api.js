@@ -74,7 +74,7 @@ exports.update = function(req,res){
   })
 }
 
-exports.show = function(req, res){
+exports.showByKey = function(req, res){
   Api.findOne({'key':req.params.key}, function(err,api){
     if(err) return res.json(400,{info:{code:'',message:err.err}})
     if(api == null) return res.json(400,{info:{code:'',message:'object not found'}})
@@ -92,6 +92,23 @@ exports.show = function(req, res){
   })
 }
 
+exports.showById = function(req, res){
+  Api.findOne({'_id':req.params.id}, function(err,api){
+    if(err) return res.json(400,{info:{code:'',message:err.err}})
+    if(api == null) return res.json(400,{info:{code:'',message:'object not found'}})
+    Api.find().where('parentId').equals(api._id).exec(function(err,apis){
+      if(err) return res.json(400,{info:{code:'',message:err.err}})
+      api.children = apis
+      if(api.parentId!=0){
+        Api.findOne({'_id':api.parentId}, function(err, parent){
+            if(err) return res.json(400,{info:{code:'',message:err.err}})
+            api.parent = parent
+            return res.json(api)
+        })
+      }else return res.json(api)
+    })
+  })
+}
 
 exports.remove = function(req,res){
   Api.count({'parentId':req.params.id}, function(err, count){
