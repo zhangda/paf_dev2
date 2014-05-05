@@ -1,7 +1,7 @@
 var async = require('async');
 var Api = require('../models/api');
 
-exports.post = function(req, res){
+exports.create = function(req, res){
   var api = new Api(req.body);
   if(api.parentId!=="0"){
     Api.findOne({'_id':api.parentId}, function(err, parent){
@@ -12,6 +12,11 @@ exports.post = function(req, res){
         return res.json(api)
       })
     })
+  }else{
+      api.save(function(err, api){
+        if(err) return res.json(400,{info:{code:'',message:err.err}})
+        return res.json(api)
+      })
   }
 }
 
@@ -23,12 +28,10 @@ function mergeToParent(tail, result){
             result[result.length-1].apis[j].children = []
           }
           result[result.length-1].apis[j].children.push(tail.apis[i])
-          console.log(result[result.length-1].apis[j]);
           break;
         }
     }
    }
-
 }
 
 exports.list = function(req,res){
@@ -39,6 +42,7 @@ exports.list = function(req,res){
   var result = [];
   async.forEach(levels, function(level,callback){
      Api.find().where('level').equals(level).select('name key parentId').exec(function(err,apis){
+          if(err) return res.json(400,{info:{code:'',message:err.err}})
           var tmp = {}
           tmp.level = level
           tmp.apis = apis
@@ -46,7 +50,7 @@ exports.list = function(req,res){
           callback();
       });
   }, function(err){
-     if(err) return res.json(400,{info:{code:'',message:err.err}});
+      if(err) return res.json(400,{info:{code:'',message:err.err}});
       result.sort(function(a, b){
         if(a.level < b.level)
           return -1;
@@ -63,21 +67,6 @@ exports.list = function(req,res){
   });
 }
 
-/*
-exports.get = function(req, res){
-  Api.findOne({'key':req.params.key}, function(err,api){
-    if(err) return res.json(400,{info:{code:'',message:err.err}})
-    return res.json(api)
-  })
-}
-
-exports.remove = function(req,res){
-  Api.findByIdAndRemove(req.params.id, function(err,api){
-    if(err) return res.json(400,{info:{code:'',message:err.err}})
-    return res.json(api)
-    })
-}
-
 exports.update = function(req,res){
   Api.findByIdAndUpdate(req.params.id, req.body, function(err, api){
     if(err) return res.json(400,{info:{code:'',message:err.err}})
@@ -85,7 +74,33 @@ exports.update = function(req,res){
   })
 }
 
+exports.show = function(req, res){
+  Api.findOne({'key':req.params.key}, function(err,api){
+    if(err) return res.json(400,{info:{code:'',message:err.err}})
+    if(api == null) return res.json(400,{info:{code:'',message:'object not found'}})
+    Api.find().where('parentId').equals(api._id).select('name key').exec(function(err,apis){
+      if(err) return res.json(400,{info:{code:'',message:err.err}})
+      api.children = apis
+      return res.json(api)
+    })
+  })
+}
 
+
+exports.remove = function(req,res){
+  Api.count({'parentId':req.params.id}, function(err, count){
+    if(err) return res.json(400,{info:{code:'',message:err.err}})
+    if(count>0){
+      return res.json(400,{info:{code:'',message:'it is not leaf node, delete its children first'}})
+    }
+    Api.findByIdAndRemove(req.params.id, function(err,api){
+      if(err) return res.json(400,{info:{code:'',message:err.err}})
+      return res.json(api)
+    })
+  })
+}
+
+/*
 exports.query = function(req, res){
   var queryString = []
   for(var i in req.query){

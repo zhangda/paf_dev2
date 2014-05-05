@@ -48,11 +48,11 @@ function auth(req, res, next){
 app.get('/', routes.index)
 
 app.get('/apis/:level', api.list)
-//app.post('/api', auth, api.post)
-app.post('/api', api.post)
+app.post('/api', api.create)
+app.put('/api/:id', api.update)
+app.get('/api/:key', api.show)
+app.del('/api/:id', api.remove)
 //app.get('/api/query', api.query)
-//app.del('/api/:id', auth, api.remove)
-//app.put('/api/:id', auth, api.update)
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
