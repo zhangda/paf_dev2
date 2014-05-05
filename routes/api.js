@@ -41,7 +41,7 @@ exports.list = function(req,res){
   }
   var result = [];
   async.forEach(levels, function(level,callback){
-     Api.find().where('level').equals(level).select('name key parentId').exec(function(err,apis){
+     Api.find().where('level').equals(level).exec(function(err,apis){
           if(err) return res.json(400,{info:{code:'',message:err.err}})
           var tmp = {}
           tmp.level = level
@@ -78,7 +78,7 @@ exports.show = function(req, res){
   Api.findOne({'key':req.params.key}, function(err,api){
     if(err) return res.json(400,{info:{code:'',message:err.err}})
     if(api == null) return res.json(400,{info:{code:'',message:'object not found'}})
-    Api.find().where('parentId').equals(api._id).select('name key').exec(function(err,apis){
+    Api.find().where('parentId').equals(api._id).exec(function(err,apis){
       if(err) return res.json(400,{info:{code:'',message:err.err}})
       api.children = apis
       return res.json(api)
