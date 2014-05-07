@@ -1,129 +1,133 @@
 var async = require('async');
-var Global = require('../models/global');
-var User = require('../models/user');
-var Group = require('../models/group');
 var bcrypt = require('bcryptjs');
 var utils = require('./utils');
-var Set = require('../models/set');
+
+var $ = require("mongous").Mongous;
 
 exports.list = function(req,res){
-  User.find({_key:{$regex:/^user:.*/}}).exec(function(err, users){
-  	if(err) return res.json(400,{info:{code:'', message:err.err}});
-  	return res.json(users)
-  })
+  $("nodebb.objects").find({_key:{$regex:/^user:.*/}},function(users){
+    return res.json(users.documents)
+});
 }
 
-exports.create = function(req,res){
-  var user = new User(req.body)
+exports.create = function(req, res){
+  var user = req.body
   var now = Date.now()
   user.lastonline = now
   user.joindate = now
   var userslug = utils.slugify(user.username);
   async.parallel([
-  	function(callback){
-      Global.findOne({_key:'global'}).exec(function(err, global){
-  	    if(err) return callback(err)
-        callback(null, global)
-  	  })
-  	},
-  	function(callback){
-	  Group.findOne({_key:'group:registered-users:members'}).exec(function(err,group){
-  		if(err) return callback(err)
-  		callback(null, group)
-  	})
-  	},
-  	function(callback){
-	  bcrypt.genSalt(12, function(err, salt) {
-		if (err) return callback(err);
-		bcrypt.hash(user.password, salt, callback);
-	  })
-	},
-	function(callback){
-	   if(utils.isUserNameValid(user.username))
-	   callback()
-	   else callback("invalid username")
-	},
-	function(callback){
-	   if(utils.isPasswordValid(user.password))
-	   callback()
-	   else callback("invalid password")
-	},
     function(callback){
-	   User.count({'userslug':userslug}, function(err, count){
-	   	 if(count>0) callback("username taken")
-	   	 callback()
-	   })
-	}
-  ], function(err, results) { 
-       if(err) return res.json(400,{info:{code:'', message:err}});
-       var uid = results[0].nextUid + 1
-       async.auto({
-       	  createUser: function(callback){
-       	  	var hashPwd = results[2]
-       	  	user._key = "user:"+uid
-       	  	user.uid = uid
-       	  	user.userslug = userslug;
-       	  	user.password = hashPwd
-       	  	user.save(function(err, user){
-       	  		if(err) return callback(err)
-       	  		callback(null, user)
-       	  	})
-       	  },
-       	  updateGlobal: ['createUser', function(callback){
-       	  	var global = new Global(results[0])
-       	  	Global.findById(global._id, function(err, global){
-              global.nextUid = uid 
-       	  	  global.userCount = uid
-       	  	  global.save(function(err, global){
-       	  	  	if(err) return callback(err)
-    		    callback(null, global)
-       	  	  })
+      $("nodebb.objects").find({_key:'global'},function(global){
+        callback(null, global.documents[0])
+      })
+    },
+    function(callback){
+      $("nodebb.objects").find({_key:'group:registered-users:members'}, function(group){
+         callback(null, group.documents[0])
+      })
+    },
+    function(callback){
+      bcrypt.genSalt(12, function(err, salt) {
+      if (err) return callback(err);
+      bcrypt.hash(user.password, salt, callback);
+      })
+    },
+    function(callback){
+     if(utils.isUserNameValid(user.username))
+     callback()
+     else callback("invalid username")
+    },
+    function(callback){
+     if(utils.isPasswordValid(user.password))
+     callback()
+     else callback("invalid password")
+    },
+    function(callback){
+     $("nodebb.objects").find({'userslug':userslug}, function(users){
+       if(users.documents.length>0) callback("username taken")
+       else callback()
+     })
+    }
+  ],function(err, results){
+      if(err) return res.json(400,{info:{code:'', message:err}});
+      var uid = results[0].nextUid + 1
+      async.auto({
+          createUser: function(callback){
+            var hashPwd = results[2]
+            user._key = "user:"+uid
+            user.uid = uid
+            user.userslug = userslug
+            user.password = hashPwd
+            user.banned = 0
+            user.birthday=""
+            user.email = ""
+            user.fullname = ""
+            user.gravatarpicture="https://secure.gravatar.com/avatar/d10ca8d11301c2f4993ac2279ce4b930?size=128&default=identicon&rating=pg"
+            user.lastposttime = 0
+            user.location = 0
+            user.picture="https://secure.gravatar.com/avatar/d10ca8d11301c2f4993ac2279ce4b930?size=128&default=identicon&rating=pg"
+            user.postcount=0
+            user.profileviews=0
+            user.reputation=0
+            user.signature=""
+            user.status="online"
+            user.uploadedpicture=""
+            user.website=""
+            $("nodebb.objects").save(user)
+            callback(null, user)
+          },
+          updateGlobal: ['createUser', function(callback){
+            var global = results[0]
+            global.nextUid = uid 
+            global.userCount = uid
+            $("nodebb.objects").update({_id:global._id}, global)
+            callback(null, global)
+          }],
+          updateSet1:['createUser', function(callback){
+            var set = {}
+            set._key = "users:joindate"
+            set.score = now
+            set.value = uid
+            $("nodebb.objects").save(set)
+            callback(null, set)
+          }],
+          updateSet2:['createUser', function(callback){
+            var set = {}
+            set._key = "users:postcount"
+            set.score = 0
+            set.value = uid
+            $("nodebb.objects").save(set)
+            callback(null, set)
+          }],
+          updateSet3:['createUser', function(callback){
+            var set = {}
+            set._key = "users:reputation"
+            set.score = 0
+            set.value = uid
+            $("nodebb.objects").save(set)
+            callback(null, set)
+          }],
+          updateMap1:['createUser', function(callback){
+            $("nodebb.objects").find({_key:'username:uid'}, function(map){
+              var mapping = map.documents[0]
+              mapping[user.username] = uid
+              $("nodebb.objects").update({_id:mapping._id}, mapping)
+              callback(null, mapping)
             })
-       	  }],
-       	  updateGroup: ['createUser', function(callback){
-       	  	var group = new Group(results[1])
-       	  	Group.findById(group._id, function(err, group){
-       	  	    group.members.push(uid+'')
-       	  	    group.save(function(err, group){
-                  if(err) return callback(err)
-       	  		  callback(null, group)
-       	  	    })
-       	  	})
-       	  }],
-       	  updateSet1:['createUser', function(callback){
-       	  	var set = new Set()
-       	  	set._key = "users:joindate"
-       	  	set.score = now
-       	  	set.value = uid
-       	  	set.save(function(err, set){
-       	  		if(err) return callback(err)
-       	  		callback(null, set)
-       	  	})
-       	  }],
-       	  updateSet2:['createUser', function(callback){
-       	  	var set = new Set()
-       	  	set._key = "users:postcount"
-       	  	set.score = 0
-       	  	set.value = uid
-       	  	set.save(function(err, set){
-       	  		if(err) return callback(err)
-       	  		callback(null, set)
-       	  	})
-       	  }],
-       	  updateSet3:['createUser', function(callback){
-       	  	var set = new Set()
-       	  	set._key = "users:reputation"
-       	  	set.score = 0
-       	  	set.value = uid
-       	  	set.save(function(err, set){
-       	  		if(err) return callback(err)
-       	  		callback(null, set)
-       	  	})
-       	  }]
-       	}, function(err, results){
-       		if(err) return res.json(400,{info:{code:'', message:err}});
-       		return res.json(results)
-       	})
-     }
+          }],
+          updateMap2:['createUser', function(callback){
+            $("nodebb.objects").find({_key:'userslug:uid'}, function(map){
+              var mapping = map.documents[0]
+              mapping[user.userslug] = uid
+              $("nodebb.objects").update({_id:mapping._id}, mapping)
+              callback(null, mapping)
+            })
+          }],
+      },function(err, results){
+          if(err) return res.json(400,{info:{code:'', message:err}});
+          return res.json(results)
+      })
+    }
   )
 }

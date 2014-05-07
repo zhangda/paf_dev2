@@ -13,6 +13,7 @@
     "formidable": "~1.0.14",
     "async": "~0.8.0",
     "bcryptjs": "~0.7.12",
-    "xregexp": "~2.0.0"
+    "xregexp": "~2.0.0",
+    "mongous": "~0.2.5"
   }
 }
