@@ -11,6 +11,8 @@
     "mongoose": "~3.8.4",
     "request": "~2.33.0",
     "formidable": "~1.0.14",
-    "async": "~0.8.0"
+    "async": "~0.8.0",
+    "bcryptjs": "~0.7.12",
+    "xregexp": "~2.0.0"
   }
 }

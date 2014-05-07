@@ -1,6 +1,9 @@
 var mongoose = require('mongoose')
 
-var conn = mongoose.createConnection('mongodb://localhost/paf_dev2');
+// var conn = mongoose.createConnection('mongodb://localhost/paf_dev2', {server : {poolSize : 1}});
+// conn.on('error', function (err) {
+//   console.log(err)
+// })
 
 var apiSchema = new mongoose.Schema({
    name: {type:String,required:true},
@@ -16,4 +19,4 @@ var apiSchema = new mongoose.Schema({
    parent: mongoose.Schema.Types.Mixed
 })
 
-module.exports = conn.model('Api', apiSchema);
+module.exports = mongoose.model('Api', apiSchema);

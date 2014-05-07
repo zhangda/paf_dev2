@@ -11,14 +11,12 @@ var http = require('http');
 var path = require('path');
 var mongoose = require('mongoose');
 
-/*
 mongoose.connect('mongodb://localhost/paf_dev2')
 var db = mongoose.connection
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function callback () {
    console.log('yay!')
   });
-*/
 
 var app = express();
 
@@ -58,6 +56,7 @@ app.del('/api/:id', api.remove)
 //app.get('/api/query', api.query)
 
 app.get('/users', user.list)
+app.post('/user', user.create)
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
