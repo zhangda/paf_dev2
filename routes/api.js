@@ -78,16 +78,24 @@ exports.update = function(req,res){
     levels.push(i);
   }
   var offspring = [];
-  async.forEach(levels, function(level,callback){
-     Api.find().where('level').equals(level).exec(function(err,apis){
-          if(err) return res.json(400,{info:{code:'',message:err.err}})
+  async.forEachSeries(levels, function(level,callback){
+     // Api.find().where('level').equals(level).exec(function(err,apis){
+     //      if(err) return res.json(400,{info:{code:'',message:err.err}})
+     //      var tmp = {}
+     //      tmp.level = level
+     //      tmp.apis = apis
+     //      offspring.push(tmp)
+     //      callback();
+     //  });
+     $("paf_dev2.apis").find({'level':level}, function(apis){
           var tmp = {}
           tmp.level = level
-          tmp.apis = apis
+          tmp.apis = apis.documents
           offspring.push(tmp)
-          callback();
-      });
+          callback()
+     })
   }, function(err){
+    console.log(offspring)
       if(err) return res.json(400,{info:{code:'',message:err.err}});
       offspring.sort(function(a, b){
         if(a.level < b.level)
