@@ -70,9 +70,9 @@ exports.list = function(req,res){
 
 exports.update = function(req,res){
   var id = req.params.id
-  var pid = req.params.pid
+  var pid = req.body.targetId
   var lvl = parseInt(req.body.level)
-  var plvl = parseInt(req.params.plvl)
+  var plvl = parseInt(req.body.targetLevel)
   var levels = [];
   for(var i=lvl+1;i<=10;i++){
     levels.push(i);

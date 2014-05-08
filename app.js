@@ -49,7 +49,7 @@ app.get('/', routes.index)
 
 app.get('/apis/:start/:end', api.list)
 app.post('/api', api.create)
-app.put('/api/:id/:pid/:plvl', api.update)
+app.put('/api/:id', api.update)
 app.get('/api/key/:key', api.showByKey)
 app.get('/api/id/:id', api.showById)
 app.del('/api/:id', api.remove)
