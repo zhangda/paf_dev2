@@ -1,5 +1,6 @@
 var async = require('async');
 var Api = require('../models/api');
+  var $ = require("mongous").Mongous;
 
 exports.create = function(req, res){
   var api = new Api(req.body);
@@ -36,7 +37,7 @@ function mergeToParent(tail, result){
 
 exports.list = function(req,res){
   var levels = [];
-  for(var i=0;i<=req.params.level;i++){
+  for(var i=req.params.start;i<=req.params.end;i++){
     levels.push(i);
   }
   var result = [];
@@ -68,11 +69,52 @@ exports.list = function(req,res){
 }
 
 exports.update = function(req,res){
-  Api.findByIdAndUpdate(req.params.id, req.body, function(err, api){
-    if(err) return res.json(400,{info:{code:'',message:err.err}})
-    return res.json(api)
-  })
-}
+  var id = req.params.id
+  var pid = req.params.pid
+  var lvl = parseInt(req.body.level)
+  var plvl = parseInt(req.params.plvl)
+  var levels = [];
+  for(var i=lvl+1;i<=10;i++){
+    levels.push(i);
+  }
+  var offspring = [];
+  async.forEach(levels, function(level,callback){
+     Api.find().where('level').equals(level).exec(function(err,apis){
+          if(err) return res.json(400,{info:{code:'',message:err.err}})
+          var tmp = {}
+          tmp.level = level
+          tmp.apis = apis
+          offspring.push(tmp)
+          callback();
+      });
+  }, function(err){
+      if(err) return res.json(400,{info:{code:'',message:err.err}});
+      offspring.sort(function(a, b){
+        if(a.level < b.level)
+          return -1;
+        if(a.level > b.level)
+          return 1;
+        return 0;
+      });
+      var children = filterOutChildren(offspring, id)
+      var offset = plvl + 1 - lvl
+      async.forEach(children, function(child, callback){
+        var newlvl = child.level + offset
+        Api.findByIdAndUpdate(child._id, {level:newlvl}, function(err, api){
+          if(err) callback(err)
+          else callback(null, api)
+         })
+      },function(err){
+          var api = req.body
+          api.level = plvl+1
+          api.parentId = pid
+          Api.findByIdAndUpdate(id, api, function(err, api){
+            console.log(err)
+            if(err) return res.json(400,{info:{code:'',message:err}});
+            else return res.json(api)
+          })
+      })
+  })}
 
 exports.showByKey = function(req, res){
   Api.findOne({'key':req.params.key}, function(err,api){
@@ -123,6 +165,72 @@ exports.remove = function(req,res){
   })
 }
 
+function filterOutChildren(offspring, id){
+  var result = []
+  ids = [id]
+  for(var i=0;i<offspring.length;i++){
+    console.log(ids)
+    var filtered = offspring[i].apis.filter(function(value, index, ar){
+      if(ids.indexOf(value.parentId)>-1)
+        return true
+      else
+        return false
+    })
+    result.push(filtered)
+    ids = []
+    for(var j=0;j<filtered.length;j++){
+      ids.push(filtered[j]._id+"")
+    }
+  }
+  merged = []
+  return merged.concat.apply(merged, result);
+}
+
+
+exports.move = function(req,res){
+  var id = req.params.id
+  var pid = req.params.pid
+  var lvl = parseInt(req.params.lvl)
+  var plvl = parseInt(req.params.plvl)
+  var levels = [];
+  for(var i=lvl+1;i<=10;i++){
+    levels.push(i);
+  }
+  var offspring = [];
+  async.forEach(levels, function(level,callback){
+     Api.find().where('level').equals(level).exec(function(err,apis){
+          if(err) return res.json(400,{info:{code:'',message:err.err}})
+          var tmp = {}
+          tmp.level = level
+          tmp.apis = apis
+          offspring.push(tmp)
+          callback();
+      });
+  }, function(err){
+      if(err) return res.json(400,{info:{code:'',message:err.err}});
+      offspring.sort(function(a, b){
+        if(a.level < b.level)
+          return -1;
+        if(a.level > b.level)
+          return 1;
+        return 0;
+      });
+      var children = filterOutChildren(offspring, id)
+      var offset = plvl + 1 - lvl
+      async.forEach(children, function(child, callback){
+        var newlvl = child.level + offset
+        Api.findByIdAndUpdate(child._id, {level:newlvl}, function(err, api){
+          if(err) callback(err)
+          else callback(null, api)
+         })
+      },function(err){
+          if(err) return res.json(400,{info:{code:'',message:err.err}})
+          Api.findByIdAndUpdate(id, {level:plvl+1, parentId:pid}, function(err, api){
+            if(err) return res.json(400,{info:{code:'',message:err.err}});
+            else return res.json(api)
+          })
+      })
+  })}
 /*
 exports.query = function(req, res){
   var queryString = []

@@ -47,12 +47,13 @@ function auth(req, res, next){
 
 app.get('/', routes.index)
 
-app.get('/apis/:level', api.list)
+app.get('/apis/:start/:end', api.list)
 app.post('/api', api.create)
-app.put('/api/:id', api.update)
+app.put('/api/:id/:pid/:plvl', api.update)
 app.get('/api/key/:key', api.showByKey)
 app.get('/api/id/:id', api.showById)
 app.del('/api/:id', api.remove)
+app.get('/api/move/:id/:lvl/:pid/:plvl', api.move)
 //app.get('/api/query', api.query)
 
 app.get('/users', user.list)
