@@ -53,7 +53,6 @@ app.put('/api/:id', api.update)
 app.get('/api/key/:key', api.showByKey)
 app.get('/api/id/:id', api.showById)
 app.del('/api/:id', api.remove)
-app.get('/api/move/:id/:lvl/:pid/:plvl', api.move)
 //app.get('/api/query', api.query)
 
 app.get('/users', user.list)
