@@ -34,15 +34,12 @@ function mergeToParent(tail, result){
    }
 }
 
-exports.list = function(req,res){
-  var levels = [];
-  for(var i=req.params.start;i<=req.params.end;i++){
-    levels.push(i);
-  }
+function findSubTree(levels, callback){
+  console.log(levels)
   var result = [];
   async.forEach(levels, function(level,callback){
      Api.find().where('level').equals(level).exec(function(err,apis){
-          if(err) return res.json(400,{info:{code:'',message:err}})
+          if(err) return callback(err)
           var tmp = {}
           tmp.level = level
           tmp.apis = apis
@@ -50,7 +47,7 @@ exports.list = function(req,res){
           callback();
       });
   }, function(err){
-      if(err) return res.json(400,{info:{code:'',message:err}});
+      if(err) return err
       result.sort(function(a, b){
         return a.level - b.level;
       });
@@ -59,11 +56,19 @@ exports.list = function(req,res){
       var tail = result.pop();
       mergeToParent(tail, result);
     }
-    return res.json(result[0].apis);
+    callback(result[0].apis)
   });
 }
 
-
+exports.list = function(req,res){
+  var levels = [];
+  for(var i=parseInt(req.params.start);i<=req.params.end;i++){
+    levels.push(i);
+  }
+  findSubTree(levels, function(result){
+    return res.json(result)
+  })
+}
 
 exports.sibling = function(req, res){
   Api.findOne({_id:req.params.id}, function(err, curr) {
@@ -76,34 +81,17 @@ exports.sibling = function(req, res){
           for(var i=parent.level+1; i<=parent.level+2;i++){
             levels.push(i);
           }
-          var result = [];
-          async.forEach(levels, function(level,callback){
-             Api.find().where('level').equals(level).exec(function(err,apis){
-                  if(err) return res.json(400,{info:{code:'',message:err}})
-                  var tmp = {}
-                  tmp.level = level
-                  tmp.apis = apis
-                  result.push(tmp)
-                  callback();
-              });
-          }, function(err){
-              if(err) return res.json(400,{info:{code:'',message:err}});
-              result.sort(function(a, b){
-                return a.level - b.level;
-              });
-
-            while(result.length>1){
-              var tail = result.pop();
-              mergeToParent(tail, result);
-            }
-            var filtered = result[0].apis.filter(function(value, index, ar){
-              for(var i=0;i<siblings.length;i++){
-                if(siblings[i]._id == value._id) return true
+          findSubTree(levels, function(result){
+            var filtered = result.filter(function(value, index, ar){
+            for(var i=0;i<siblings.length;i++){
+                if(siblings[i].key == value.key) {
+                  return true
+                }
               }
               return false;
             })
-            return res.json(result[0].apis);
-          });
+            return res.json(filtered);
+            })
         })
     })
   })
