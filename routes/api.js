@@ -63,6 +63,52 @@ exports.list = function(req,res){
   });
 }
 
+
+
+exports.sibling = function(req, res){
+  Api.findOne({_id:req.params.id}, function(err, curr) {
+    if(err) return res.json(400,{info:{code:'',message:err}})
+    Api.findOne({_id:curr.parentId}, function(err, parent){
+       if(err) return res.json(400,{info:{code:'',message:err}})
+        Api.find({parentId:parent._id}, function(err, siblings){
+           if(err) return res.json(400,{info:{code:'',message:err}})
+          var levels = [];
+          for(var i=parent.level+1; i<=parent.level+2;i++){
+            levels.push(i);
+          }
+          var result = [];
+          async.forEach(levels, function(level,callback){
+             Api.find().where('level').equals(level).exec(function(err,apis){
+                  if(err) return res.json(400,{info:{code:'',message:err}})
+                  var tmp = {}
+                  tmp.level = level
+                  tmp.apis = apis
+                  result.push(tmp)
+                  callback();
+              });
+          }, function(err){
+              if(err) return res.json(400,{info:{code:'',message:err}});
+              result.sort(function(a, b){
+                return a.level - b.level;
+              });
+
+            while(result.length>1){
+              var tail = result.pop();
+              mergeToParent(tail, result);
+            }
+            var filtered = result[0].apis.filter(function(value, index, ar){
+              for(var i=0;i<siblings.length;i++){
+                if(siblings[i]._id == value._id) return true
+              }
+              return false;
+            })
+            return res.json(result[0].apis);
+          });
+        })
+    })
+  })
+}
+
 function filterOutChildren(offspring, id){
   var result = []
   ids = [id]
