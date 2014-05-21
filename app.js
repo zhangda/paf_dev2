@@ -54,7 +54,7 @@ app.put('/api/:id', api.update)
 app.get('/api/key/:key', api.showByKey)
 app.get('/api/id/:id', api.showById)
 app.del('/api/:id', api.remove)
-//app.get('/api/query', api.query)
+app.get('/api/:itemPerPage/:page/:queryString', api.query)
 
 app.get('/users', user.list)
 app.post('/user', user.create)

@@ -11,7 +11,8 @@ var apiSchema = new mongoose.Schema({
    level: {type:Number, default:0},
    section: mongoose.Schema.Types.Mixed,
    children: mongoose.Schema.Types.Mixed,
-   parent: mongoose.Schema.Types.Mixed
+   parent: mongoose.Schema.Types.Mixed,
+   tags: String
 })
 
 module.exports = mongoose.model('Api', apiSchema);

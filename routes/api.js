@@ -35,11 +35,10 @@ function mergeToParent(tail, result){
 }
 
 function findSubTree(levels, callback){
-  console.log(levels)
   var result = [];
   async.forEach(levels, function(level,callback){
      Api.find().where('level').equals(level).exec(function(err,apis){
-          if(err) return callback(err)
+          if(err) return callback(err, null)
           var tmp = {}
           tmp.level = level
           tmp.apis = apis
@@ -56,7 +55,7 @@ function findSubTree(levels, callback){
       var tail = result.pop();
       mergeToParent(tail, result);
     }
-    callback(result[0].apis)
+    callback(null, result[0].apis)
   });
 }
 
@@ -65,7 +64,8 @@ exports.list = function(req,res){
   for(var i=parseInt(req.params.start);i<=req.params.end;i++){
     levels.push(i);
   }
-  findSubTree(levels, function(result){
+  findSubTree(levels, function(err, result){
+    if(err) return res.json(400,{info:{code:'',message:err}})
     return res.json(result)
   })
 }
@@ -81,7 +81,8 @@ exports.sibling = function(req, res){
           for(var i=parent.level+1; i<=parent.level+2;i++){
             levels.push(i);
           }
-          findSubTree(levels, function(result){
+          findSubTree(levels, function(err, result){
+            if(err) return res.json(400,{info:{code:'',message:err}})
             var filtered = result.filter(function(value, index, ar){
             for(var i=0;i<siblings.length;i++){
                 if(siblings[i].key == value.key) {
@@ -236,17 +237,48 @@ exports.remove = function(req,res){
   })
 }
 
-/*
 exports.query = function(req, res){
-  var queryString = []
-  for(var i in req.query){
-    var item ={};
-    item[i] =req.query[i];
-    queryString.push(item);
+  var itemPerPage = parseInt(req.params.itemPerPage)
+  var page = parseInt(req.params.page) - 1
+  var queryString = decodeURIComponent(req.params.queryString)
+  var queryArr = queryString.split(/\s+/)
+  var queryStr = []
+  for(var i=0; i<queryArr.length ; i++){
+    var re = new  RegExp(queryArr[i], 'gi')
+    var tmp = {}
+    tmp.name = {$regex: re}
+    queryStr.push(tmp)
+    var tmp2 = {}
+    tmp2.tags = {$regex: re}
+    queryStr.push(tmp2)
   }
-  Api.find({$or:queryString}, function(err, apis){
-    if(err) return res.json(400,{info:{code:'',message:err.err}})
-    return res.json(apis)
-  })  
+
+  async.parallel([ 
+    function(cb) { 
+      Api.count({$or:queryStr}).exec(function(err, count){
+       if(err){
+        return cb(err)
+      }else{
+        cb(null, count)
+      }
+      })
+    }, 
+    function(cb) { 
+      Api.find({$or:queryStr}).skip(itemPerPage*page).limit(itemPerPage).exec(function(err, apis){
+       if(err){
+        return cb(err)
+      }else{
+        cb(null, apis)
+      }
+      })
+    }
+  ], function (err, results) { 
+    if(err) return res.json(400,{info:{code:'',message:err}})
+    var result = {}
+    result.total = results[0]
+    result.list = results[1]
+    return res.json(result)
+  });
+
 }
-*/
+
