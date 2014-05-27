@@ -59,6 +59,7 @@ app.get('/api/:itemPerPage/:page/:queryString', api.query)
 // app.get('/users', user.list)
 app.post('/user', user.create)
 app.post('/login', user.login)
+app.post('/user/password', user.password)
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));

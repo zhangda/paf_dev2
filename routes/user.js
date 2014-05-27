@@ -9,7 +9,8 @@ function md5 (text) {
 exports.login = function(req, res){
   var user = req.body
   User.findOne({'username':user.username, 'password':md5(user.password)}, function(err, user){
-     if(err || user==null) return res.json(400,{info:{code:'',message:err}})
+     if(err) return res.json(400,{info:{code:'',message:err}})
+     if(user == null ) res.json(400,{info:{code:'',message:'username or password wrong'}})
      if(Date.now() - new Date(user.updatetime).getTime() > 1000*3600){
         user.updatetime = Date.now()
         crypto.randomBytes(16,  function(ex, buf){
@@ -30,6 +31,18 @@ exports.create = function(req, res){
   user.password = md5(user.password)
   crypto.randomBytes(16,  function(ex, buf){
     user.token = buf.toString('hex'); 
+    user.save(function(err, user){
+        if(err) return res.json(400,{info:{code:'',message:err}})
+        return res.json(user)
+    })
+  })
+}
+
+exports.password = function(req, res){
+  User.findOne({'username':req.body.username, 'password':md5(req.body.password)}, function(err, user){
+    if(err) return res.json(400,{info:{code:'',message:err}})
+    if(user == null ) res.json(400,{info:{code:'',message:'username or password wrong'}})
+    user.password = md5(req.body.newPassword)
     user.save(function(err, user){
         if(err) return res.json(400,{info:{code:'',message:err}})
         return res.json(user)
